@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/test1
+    username: root
+    password: 111
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+security:
+  jwt:
+    secret: ZmVzcnNyZ3dyZWR0ZGh0cmprZmRodHNoZmdoc2RnaEtIWUtZSE9MSEw=
+    access: 1
+
+server:
+  port: 9999
