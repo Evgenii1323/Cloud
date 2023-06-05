@@ -55,7 +55,7 @@ public class SecurityConfig {
                 })
                 .and()
                 .authorizeHttpRequests()
-                .requestMatchers("/login").permitAll()
+                .requestMatchers("/cloud/login").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .anonymous().disable()

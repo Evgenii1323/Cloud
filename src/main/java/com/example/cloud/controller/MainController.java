@@ -8,7 +8,6 @@ import com.example.cloud.service.UserFileService;
 import org.springframework.core.io.Resource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.security.Principal;
 import java.util.List;
 
@@ -21,27 +20,27 @@ public class MainController {
         this.userFileService = userFileService;
     }
 
-    @GetMapping("/list")
+    @GetMapping("/cloud/list")
     public List<UserFileResponse> list(@RequestParam int limit, Principal principal) {
         return userFileService.list(limit, principal);
     }
 
-    @GetMapping("/file")
+    @GetMapping("/cloud/file")
     public Resource download(@RequestParam String filename, Principal principal) throws BadRequestException {
         return userFileService.download(filename, principal);
     }
 
-    @PostMapping("/file")
+    @PostMapping("/cloud/file")
     public void upload(@RequestParam("file") MultipartFile file, @RequestParam String filename, Principal principal) throws BadRequestException {
         userFileService.upload(file, filename, principal);
     }
 
-    @PutMapping("/file")
+    @PutMapping("/cloud/file")
     public void update(@RequestBody UserFileRequest request, @RequestParam String filename, Principal principal) throws InternalServerErrorException, BadRequestException {
         userFileService.update(request, filename, principal);
     }
 
-    @DeleteMapping("/file")
+    @DeleteMapping("/cloud/file")
     public void remove(@RequestParam String filename, Principal principal) throws InternalServerErrorException, BadRequestException {
         userFileService.remove(filename, principal);
     }

@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  app:
+    container_name: Cloud
+    build:
+      context: .
+    depends_on:
+      - db
+    environment:
+      - SPRING_DATASOURCE_URL=
+      - SPRING_DATASOURCE_USERNAME=
+      - SPRING_DATASOURCE_PASSWORD=
+    ports:
+      - "8080:8080"
+  db:
+    image: mysql
+    container_name: Mysql
+    environment:
+      - MYSQL_USER=
+      - MYSQL_PASSWORD=
+      - MYSQL_DATABASE=
