@@ -1,6 +1,5 @@
 package com.example.cloud.exception;
 
-import com.example.cloud.model.Error;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,26 +9,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionHandlerAdvice {
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<Error> badRequestHandler(BadRequestException e) {
-        Error error = new Error();
-        error.setId(400);
-        error.setMessage(e.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<String> badRequestHandler(BadRequestException e) {
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<Error> unauthorizedHandler(UnauthorizedException e) {
-        Error error = new Error();
-        error.setId(401);
-        error.setMessage(e.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<String> unauthorizedHandler(UnauthorizedException e) {
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(InternalServerErrorException.class)
-    public ResponseEntity<Error> internalServerErrorHandler(InternalServerErrorException e) {
-        Error error = new Error();
-        error.setId(500);
-        error.setMessage(e.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<String> internalServerErrorHandler(InternalServerErrorException e) {
+        return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

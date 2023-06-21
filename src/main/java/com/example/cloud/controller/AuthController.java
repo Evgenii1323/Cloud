@@ -13,7 +13,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/cloud/login")
+    @PostMapping("/login")
     public JwtResponse login(@RequestBody JwtRequest jwtRequest) throws BadRequestException {
         return authService.login(jwtRequest);
     }

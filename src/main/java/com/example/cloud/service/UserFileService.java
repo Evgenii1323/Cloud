@@ -2,9 +2,11 @@ package com.example.cloud.service;
 
 import com.example.cloud.exception.BadRequestException;
 import com.example.cloud.exception.InternalServerErrorException;
+import com.example.cloud.exception.UnauthorizedException;
 import com.example.cloud.model.UserFile;
 import com.example.cloud.model.UserFileRequest;
 import com.example.cloud.model.UserFileResponse;
+import com.example.cloud.repository.AuthRepository;
 import com.example.cloud.repository.UserFileRepository;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -16,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.Principal;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -24,32 +25,41 @@ import java.util.List;
 public class UserFileService {
 
     private final UserFileRepository userFileRepository;
-    private static final String LOCATION = "./src/main/resources/static";
+    private final AuthRepository authRepository;
+    private static final String LOCATION = "./storage";
 
-    public UserFileService(UserFileRepository userFileRepository) {
+    public UserFileService(UserFileRepository userFileRepository, AuthRepository authRepository) {
         this.userFileRepository = userFileRepository;
+        this.authRepository = authRepository;
     }
 
     @Transactional
-    public List<UserFileResponse> list(int limit, Principal principal) {
-        String user = principal.getName();
-        List<UserFile> userFiles = userFileRepository.findAllWithLimit(limit, user);
+    public List<UserFileResponse> listAll(int limit, String token) throws UnauthorizedException {
+        String login = authRepository.getLogin(token);
+        if (login == null) {
+            throw new UnauthorizedException("UNAUTHORIZED");
+        }
+        List<UserFile> userFiles = userFileRepository.findAllWithLimit(limit, login);
         List<UserFileResponse> list = new LinkedList<>();
-        for (UserFile file : userFiles) {
-            UserFileResponse file1 = new UserFileResponse();
-            file1.setFilename(file.getFilename());
-            file1.setSize(file.getSize());
-            list.add(file1);
+        for (UserFile userFile : userFiles) {
+            UserFileResponse file = new UserFileResponse();
+            file.setFilename(userFile.getFilename());
+            file.setSize(userFile.getSize());
+            list.add(file);
         }
         return list;
     }
 
     @Transactional
-    public Resource download(String filename, Principal principal) throws BadRequestException {
-        UserFile userFile = userFileRepository.findByFilenameAndUser(filename, principal.getName());
+    public Resource download(String filename, String token) throws BadRequestException, UnauthorizedException {
+        String login = authRepository.getLogin(token);
+        if (login == null) {
+            throw new UnauthorizedException("UNAUTHORIZED");
+        }
+        UserFile userFile = userFileRepository.findByFilenameAndUser(filename, login);
         if (userFile != null) {
             try {
-                File catalog = createCatalog(principal);
+                File catalog = createCatalog(token);
                 File file = new File(catalog + File.separator + filename);
                 Path path = Paths.get(file.getAbsolutePath());
                 Resource resource = new UrlResource(path.toUri());
@@ -68,17 +78,21 @@ public class UserFileService {
     }
 
     @Transactional
-    public void upload(MultipartFile multipartFile, String filename, Principal principal) throws BadRequestException {
+    public void upload(MultipartFile multipartFile, String filename, String token) throws BadRequestException, UnauthorizedException {
+        String login = authRepository.getLogin(token);
+        if (login == null) {
+            throw new UnauthorizedException("UNAUTHORIZED");
+        }
         UserFile userFile = new UserFile();
-        UserFile userFile1 = userFileRepository.findByFilenameAndUser(filename, principal.getName());
+        UserFile userFile1 = userFileRepository.findByFilenameAndUser(filename, login);
         if (!multipartFile.isEmpty() && userFile1 == null) {
             try {
-                File catalog = createCatalog(principal);
+                File catalog = createCatalog(token);
                 File file = new File(catalog.getAbsolutePath() + File.separator + filename);
                 multipartFile.transferTo(file);
                 userFile.setFilename(filename);
                 userFile.setSize(multipartFile.getSize());
-                userFile.setUser(principal.getName());
+                userFile.setUser(login);
                 userFileRepository.save(userFile);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -89,13 +103,17 @@ public class UserFileService {
     }
 
     @Transactional
-    public void update(UserFileRequest request, String filename, Principal principal) throws InternalServerErrorException, BadRequestException {
-        UserFile userFile = userFileRepository.findByFilenameAndUser(filename, principal.getName());
-        UserFile userFile1 = userFileRepository.findByFilenameAndUser(request.getFilename(), principal.getName());
+    public void update(UserFileRequest request, String filename, String token) throws InternalServerErrorException, BadRequestException, UnauthorizedException {
+        String login = authRepository.getLogin(token);
+        if (login == null) {
+            throw new UnauthorizedException("UNAUTHORIZED");
+        }
+        UserFile userFile = userFileRepository.findByFilenameAndUser(filename, login);
+        UserFile userFile1 = userFileRepository.findByFilenameAndUser(request.getFilename(), login);
         if (userFile != null && userFile1 == null) {
             userFile.setFilename(request.getFilename());
             userFileRepository.save(userFile);
-            File catalog = createCatalog(principal);
+            File catalog = createCatalog(token);
             File file = new File(catalog + File.separator + filename);
             File newFile = new File(catalog + File.separator + request.getFilename());
             if (!file.renameTo(newFile)) {
@@ -107,11 +125,15 @@ public class UserFileService {
     }
 
     @Transactional
-    public void remove(String filename, Principal principal) throws InternalServerErrorException, BadRequestException {
-        UserFile userFile = userFileRepository.findByFilenameAndUser(filename, principal.getName());
+    public void remove(String filename, String token) throws InternalServerErrorException, BadRequestException, UnauthorizedException {
+        String login = authRepository.getLogin(token);
+        if (login == null) {
+            throw new UnauthorizedException("UNAUTHORIZED");
+        }
+        UserFile userFile = userFileRepository.findByFilenameAndUser(filename, login);
         if (userFile != null) {
-            userFileRepository.deleteByFilenameAndUser(filename, principal.getName());
-            File catalog = createCatalog(principal);
+            userFileRepository.deleteByFilenameAndUser(filename, login);
+            File catalog = createCatalog(token);
             File file = new File(catalog + File.separator + filename);
             Path path = Paths.get(file.getAbsolutePath());
             if (!FileSystemUtils.deleteRecursively(path.toFile())) {
@@ -122,9 +144,9 @@ public class UserFileService {
         }
     }
 
-    private static File createCatalog(Principal principal) {
-        String user = principal.getName();
-        File catalog = new File(LOCATION + File.separator + user);
+    public File createCatalog(String token) {
+        String login = authRepository.getLogin(token);
+        File catalog = new File(LOCATION + File.separator + login);
         if(!catalog.exists()) {
             catalog.mkdirs();
         }
